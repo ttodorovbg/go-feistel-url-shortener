@@ -209,11 +209,11 @@ if err != nil {
 
 When creating a new instance using `codec.NewCodec()`, you can configure it using the following functional options:
 
-| Option       | Argument Type | Default | Constraints  | Description                                   |
-| :----------- | :------------ | :------ | :----------- | :-------------------------------------------- |
-| `WithKey`    | `string`      | `*No*`  | Min 16 chars | Sets the cryptographic salt for the instance. |
-| `WithLength` | `int`         | `7`     | `8` to `36`  | Sets the fixed length of generated hashes.    |
-| `WithRounds` | `int`         | `6`     | `1` to `10`  | Sets the number of obfuscation rounds.        |
+| Option       | Argument Type | Default | Constraints       | Description                                   |
+| :----------- | :------------ | :------ | :---------------- | :-------------------------------------------- |
+| `WithKey`    | `string`      | `*No*`  | `8` to `36` chars | Sets the cryptographic salt for the instance. |
+| `WithLength` | `int`         | `7`     | `1` to `12`       | Sets the fixed length of generated hashes.    |
+| `WithRounds` | `int`         | `6`     | `1` to `10`       | Sets the number of obfuscation rounds.        |
 
 ### Instance Methods
 
@@ -242,11 +242,11 @@ counter, err := codec.ReverseHash(shortCode, key, rounds)
 
 The following parameters are used to configure the behavior of the codec. When using `NewCodec`, these are passed as functional options.
 
-| Parameter | Type     | Default    | Valid Values / Validation | Description                                     |
-| :-------- | :------- | :--------- | :------------------------ | :---------------------------------------------- |
-| `key`     | `string` | **NO**     | Range: `8` - `36` chars   | Used for salt and encryption of the hash.       |
-| `length`  | `uint8`  | `7`        | Range: `1` - `10`         | The desired length of the generated short code. |
-| `rounds`  | `uint8`  | `6`        | `3` to `10`               | Number of obfuscation rounds.                   |
+| Parameter | Type     | Default        | Valid Values / Validation | Description                                     |
+| :-------- | :------- | :------------- | :------------------------ | :---------------------------------------------- |
+| `key`     | `string` | **NO**         | Range: `8` - `36` chars   | Used for salt and encryption of the hash.       |
+| `length`  | `uint8`  | `7`            | Range: `1` - `12`         | The desired length of the generated short code. |
+| `rounds`  | `uint8`  | `6`            | `3` to `10`               | Number of obfuscation rounds.                   |
 | `counter` | `uint64` | _Required_ | `> 0`                     | The sequential ID you want to encode/hash.      |
 
 > **Note:** If any parameter fails validation, the functions will return a non-nil `error`.
