@@ -1,7 +1,6 @@
 package codec_test
 
 import (
-	"fmt"
 	"math"
 	"math/big"
 	"math/rand"
@@ -187,11 +186,10 @@ func TestCodec_GenerateHash_ValidationErrors(t *testing.T) {
 		{"37", args{10, 4, []string{}, 6, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_АБВ"}, "", true,
 			&c.ErrInvalidAlphabetLength{70, c.MinAlphabetLength, c.MaxAlphabetLength}},
 		{"38", args{10, 4, []string{}, 6, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxya-_"}, "", true,
-			&c.ErrInvalidAlphabetChar{'a'}}, // duplicate char
+			&c.ErrDuplicateAlphabetChar{'a'}}, // duplicate char
 		{"39", args{10, 4, []string{}, 6, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyБ"}, "", true,
 			&c.ErrInvalidAlphabetChar{'Б'}}, // invalid char Б
-		{"40", args{10, 4, []string{}, 6, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"}, "PYNA", false, nil}, // duplicate char
-
+		{"40", args{10, 4, []string{}, 6, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"}, "PYNA", false, nil},
 	}
 
 	for _, tt := range tests {
@@ -236,25 +234,25 @@ func TestCodec_ReverseHash_ValidationErrors(t *testing.T) {
 	}{
 		{"0", args{"abcd", []string{}, 6, c.Base62Alphabet}, big.NewInt(3396716), false, nil},
 		{"1", args{"abcd&", []string{}, 8, c.Base62Alphabet}, nil, true,
-			fmt.Errorf("invalid hash character: %c", '&')},
+			&c.ErrInvalidHashChar{'&'}},
 		{"2", args{"abc", []string{""}, 8, c.Base62Alphabet}, nil, true,
-			fmt.Errorf("invalid key length: %d, must be between %d and %d", len(""), c.MinKeyLength, c.MaxKeyLength)},
+			&c.ErrInvalidKeyLength{0, c.MinKeyLength, c.MaxKeyLength}},
 		{"3", args{"abc", []string{"1234567"}, 8, c.Base62Alphabet}, nil, true,
-			fmt.Errorf("invalid key length: %d, must be between %d and %d", len("1234567"), c.MinKeyLength, c.MaxKeyLength)},
+			&c.ErrInvalidKeyLength{7, c.MinKeyLength, c.MaxKeyLength}},
 		{"4", args{"abc", []string{"12345678"}, 6, c.Base62Alphabet}, big.NewInt(111967), false, nil},
 		{"5", args{"abc", []string{"SUPER SECRET TEST KEY 01234567891234"}, 6, c.Base62Alphabet}, big.NewInt(214668), false, nil},
 		{"6", args{"abc", []string{"SUPER SECRET TEST KEY 012345678912345"}, 8, c.Base62Alphabet}, nil, true,
-			fmt.Errorf("invalid key length: %d, must be between %d and %d", 37, c.MinKeyLength, c.MaxKeyLength)},
+			&c.ErrInvalidKeyLength{37, c.MinKeyLength, c.MaxKeyLength}},
 		{"7", args{"abc", []string{}, 0, c.Base62Alphabet}, nil, true,
-			fmt.Errorf("invalid rounds: %d, must be between %d and %d", 0, c.MinRounds, c.MaxRounds)},
+			&c.ErrInvalidRounds{0, c.MinRounds, c.MaxRounds}},
 		{"8", args{"abc", []string{}, 2, c.Base62Alphabet}, nil, true,
-			fmt.Errorf("invalid rounds: %d, must be between %d and %d", 2, c.MinRounds, c.MaxRounds)},
+			&c.ErrInvalidRounds{2, c.MinRounds, c.MaxRounds}},
 		{"9", args{"abc", []string{}, 3, c.Base62Alphabet}, big.NewInt(147118), false, nil},
 		{"10", args{"abc", []string{}, 10, c.Base62Alphabet}, big.NewInt(68860), false, nil},
 		{"11", args{"abc", []string{}, 11, c.Base62Alphabet}, nil, true,
-			fmt.Errorf("invalid rounds: %d, must be between %d and %d", 11, c.MinRounds, c.MaxRounds)},
+			&c.ErrInvalidRounds{11, c.MinRounds, c.MaxRounds}},
 		{"12", args{"", []string{}, 8, c.Base62Alphabet}, nil, true,
-			fmt.Errorf("invalid hash length: %d, must be between 1 and %d", 0, c.MaxHashLength)},
+			&c.ErrInvalidHashLength{0, c.MinHashLength, c.MaxHashLength}},
 		{"13", args{"F", []string{}, 6, c.Base62Alphabet}, big.NewInt(1), false, nil},
 		{
 			"14",
@@ -270,7 +268,13 @@ func TestCodec_ReverseHash_ValidationErrors(t *testing.T) {
 			nil,
 		},
 		{"15", args{"abcdefghijklm", []string{}, 8, c.Base62Alphabet}, nil, true,
-			fmt.Errorf("invalid hash length: %d, must be between 1 and %d", 13, c.MaxHashLength)},
+			&c.ErrInvalidHashLength{13, c.MinHashLength, c.MaxHashLength}},
+		{"16", args{"1234", []string{}, 6, "0123456789"}, big.NewInt(8005), false, nil},
+		{"17", args{"abcd", []string{}, 6, "abcdefghijklmnopqrstuvwxyz"}, big.NewInt(166432), false, nil},
+		{"18", args{"abc1", []string{}, 6, "abcdefghijklmnopqrstuvwxyz"}, nil, true,
+			&c.ErrInvalidHashChar{'1'}},
+		{"19", args{"123A", []string{}, 6, "0123456789abcdefghijklmnopqrstuvwxyz"}, nil, true,
+			&c.ErrInvalidHashChar{'A'}},
 	}
 
 	for _, tt := range tests {
@@ -279,7 +283,7 @@ func TestCodec_ReverseHash_ValidationErrors(t *testing.T) {
 			if len(tt.args.key) > 0 {
 				key = tt.args.key[0]
 			}
-			_c := c.NewCodec(c.WithKey(key), c.WithRounds(tt.args.rounds))
+			_c := c.NewCodec(c.WithKey(key), c.WithRounds(tt.args.rounds), c.WithAlphabet(tt.args.alphabet))
 			got, err := _c.ReverseHash(tt.args.hash)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ReverseHash() error = %v, wantErr %v", err, tt.wantErr)
@@ -288,6 +292,9 @@ func TestCodec_ReverseHash_ValidationErrors(t *testing.T) {
 			if err != nil && err.Error() != tt.err.Error() {
 				t.Errorf("ReverseHash() error = %v, wantErrMessage %v", err, tt.err)
 				return
+			}
+			if err != nil && reflect.TypeOf(err) != reflect.TypeOf(tt.err) {
+				t.Errorf("GenerateHash() error type = %T, want %T", err, tt.err)
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ReverseHash() = %v, want %v", got, tt.want)

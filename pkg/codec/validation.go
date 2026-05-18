@@ -55,6 +55,10 @@ type ErrInvalidAlphabetChar struct {
 	Char rune
 }
 
+type ErrDuplicateAlphabetChar struct {
+	Char rune
+}
+
 func (e *ErrInvalidRounds) Error() string {
 	return fmt.Sprintf("invalid rounds: %d, must be between %d and %d", e.Value, e.Min, e.Max)
 }
@@ -83,6 +87,10 @@ func (e *ErrInvalidAlphabetChar) Error() string {
 	return fmt.Sprintf("invalid alphabet character: %c", e.Char)
 }
 
+func (e *ErrDuplicateAlphabetChar) Error() string {
+	return fmt.Sprintf("duplicate alphabet character: %c", e.Char)
+}
+
 func validateRounds(rounds uint8) error {
 	if rounds < MinRounds || rounds > MaxRounds {
 		return &ErrInvalidRounds{
@@ -94,13 +102,15 @@ func validateRounds(rounds uint8) error {
 	return nil
 }
 
-func validateHashChars(hash string) error {
+func validateHashChars(hash string, alphabet string) error {
 	for _, c := range hash {
-		if !strings.ContainsRune(Base62Alphabet, c) {
+		if !strings.ContainsRune(allowedAlphabet, c) {
+			return &ErrInvalidHashChar{Char: c}
+		}
+		if !strings.ContainsRune(alphabet, c) {
 			return &ErrInvalidHashChar{Char: c}
 		}
 	}
-
 	return nil
 }
 
@@ -156,26 +166,15 @@ func validateAlphabetChars(alphabet string) error {
 	seen := make(map[rune]bool)
 
 	for _, c := range alphabet {
-		if c > 127 {
-			return &ErrInvalidAlphabetChar{
-				Char: c,
-			}
-		}
-
 		if !strings.ContainsRune(allowedAlphabet, c) {
-			return &ErrInvalidAlphabetChar{
-				Char: c,
-			}
+			return &ErrInvalidAlphabetChar{Char: c}
 		}
 
 		if seen[c] {
-			return &ErrInvalidAlphabetChar{
-				Char: c,
-			}
+			return &ErrDuplicateAlphabetChar{Char: c}
 		}
 		seen[c] = true
 	}
-
 	return nil
 }
 

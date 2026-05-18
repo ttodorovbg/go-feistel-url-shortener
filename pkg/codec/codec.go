@@ -236,7 +236,7 @@ func ReverseHash(hash string, key string, rounds uint8, alphabet string) (*big.I
 
 	length := len(hash)
 
-	if err := validateHashChars(hash); err != nil {
+	if err := validateHashChars(hash, alphabet); err != nil {
 		return nil, err
 	}
 	if err := validateKeyLength(key); err != nil {
